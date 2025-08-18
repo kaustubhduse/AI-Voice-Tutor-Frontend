@@ -1,9 +1,9 @@
+// App.js
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ControlPanel from './components/ControlPanel';
 import ChatWindow from './components/ChatWindow';
 
-// ✅ CRA automatically reads from process.env if prefixed with REACT_APP_
 const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
 function App() {
@@ -14,23 +14,31 @@ function App() {
   const [roleplayTopic, setRoleplayTopic] = useState('At School');
 
   const [conversations, setConversations] = useState({
-    'free-chat-en-US': [], 'At School-en-US': [], 'At the Store-en-US': [], 'At Home-en-US': [],
-    'free-chat-hi-IN': [], 'At School-hi-IN': [], 'At the Store-hi-IN': [], 'At Home-hi-IN': [],
+    'free-chat-en-US': [],
+    'At School-en-US': [],
+    'At the Store-en-US': [],
+    'At Home-en-US': [],
+    'free-chat-hi-IN': [],
+    'At School-hi-IN': [],
+    'At the Store-hi-IN': [],
+    'At Home-hi-IN': [],
   });
 
   const mediaRecorder = useRef(null);
-  const audioChunks = useRef(null);
+  const audioChunks = useRef([]);
   const chatWindowRef = useRef(null);
 
   const currentConversationKey = `${mode === 'roleplay' ? roleplayTopic : 'free-chat'}-${language}`;
   const currentConversation = conversations[currentConversationKey] || [];
 
+  // Auto-scroll
   useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
   }, [currentConversation]);
 
+  // Speech synthesis
   const speakText = (text, lang) => {
     try {
       window.speechSynthesis.cancel();
@@ -39,10 +47,11 @@ function App() {
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     } catch (error) {
-      console.error("Browser speech synthesis failed:", error);
+      console.error("Speech synthesis failed:", error);
     }
   };
 
+  // Start recording
   const handleStartRecording = async () => {
     try {
       audioChunks.current = [];
@@ -59,6 +68,7 @@ function App() {
     }
   };
 
+  // Stop recording
   const handleStopRecording = () => {
     if (mediaRecorder.current?.state === 'recording') {
       mediaRecorder.current.stop();
@@ -67,6 +77,7 @@ function App() {
     }
   };
 
+  // Send audio to backend
   const handleSendAudio = async () => {
     const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
     audioChunks.current = [];
@@ -81,21 +92,18 @@ function App() {
     formData.append('language', language);
     formData.append('mode', mode);
     formData.append('roleplayTopic', roleplayTopic);
-    formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      console.log("➡️ Sending to backend:", backendUrl); // Debugging
+      console.log("➡️ Sending to backend:", backendUrl);
 
-      const response = await axios.post(
-        `${backendUrl}/api/chat`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
+      const response = await axios.post(`${backendUrl}/api/chat`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       const { userText, aiReply } = response.data;
 
-      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
-      const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
+      // Remove emojis for speech synthesis
+      const cleanTextForSpeech = aiReply.replace(/\p{Emoji}/gu, '');
 
       setConversations(prev => ({
         ...prev,
@@ -106,11 +114,14 @@ function App() {
         ],
       }));
 
-      if (cleanTextForSpeech) {
-        speakText(cleanTextForSpeech.trim(), language);
-      }
+      if (cleanTextForSpeech) speakText(cleanTextForSpeech.trim(), language);
+
     } catch (error) {
-      console.error('❌ Error sending audio to backend:', error);
+      if (error.response) {
+        console.error("Backend error:", error.response.data);
+      } else {
+        console.error("Frontend error:", error.message);
+      }
       alert('Sorry, something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
@@ -119,7 +130,7 @@ function App() {
 
   return (
     <div style={{ fontFamily: "'Nunito', sans-serif" }} className="bg-amber-50 flex h-screen">
-      <ControlPanel 
+      <ControlPanel
         language={language} setLanguage={setLanguage}
         mode={mode} setMode={setMode}
         roleplayTopic={roleplayTopic} setRoleplayTopic={setRoleplayTopic}
@@ -127,7 +138,7 @@ function App() {
         handleStartRecording={handleStartRecording}
         handleStopRecording={handleStopRecording}
       />
-      <ChatWindow 
+      <ChatWindow
         conversation={currentConversation}
         chatWindowRef={chatWindowRef}
       />
