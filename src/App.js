@@ -3,13 +3,16 @@ import axios from 'axios';
 import ControlPanel from './components/ControlPanel';
 import ChatWindow from './components/ChatWindow';
 
+// ✅ CRA automatically reads from process.env if prefixed with REACT_APP_
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
+
 function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState('en-US');
   const [mode, setMode] = useState('free-chat');
   const [roleplayTopic, setRoleplayTopic] = useState('At School');
-  
+
   const [conversations, setConversations] = useState({
     'free-chat-en-US': [], 'At School-en-US': [], 'At the Store-en-US': [], 'At Home-en-US': [],
     'free-chat-hi-IN': [], 'At School-hi-IN': [], 'At the Store-hi-IN': [], 'At Home-hi-IN': [],
@@ -81,15 +84,19 @@ function App() {
     formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      const response = await axios.post('http://localhost:3001/api/chat', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      console.log("➡️ Sending to backend:", backendUrl); // Debugging
+
+      const response = await axios.post(
+        `${backendUrl}/api/chat`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
 
       const { userText, aiReply } = response.data;
-      
+
       const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
       const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
-      
+
       setConversations(prev => ({
         ...prev,
         [currentConversationKey]: [
@@ -103,7 +110,7 @@ function App() {
         speakText(cleanTextForSpeech.trim(), language);
       }
     } catch (error) {
-      console.error('Error sending audio to backend:', error);
+      console.error('❌ Error sending audio to backend:', error);
       alert('Sorry, something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
