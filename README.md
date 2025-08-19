@@ -1,70 +1,128 @@
-# Getting Started with Create React App
+# AI Voice Tutor Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the **frontend React application** for the AI Voice Tutor project. It allows users (children) to interact with an AI English tutor using **voice**. The AI can chat freely or roleplay scenarios like **At School, At Home, or At the Store**. Users can also select the language for conversation.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## **Features**
 
-### `npm start`
+* Record audio via microphone.
+* Send audio to backend for **transcription** and AI response.
+* Receive AI responses and display them in a chat window.
+* Supports **roleplay mode** with different scenarios.
+* Supports multiple languages (English `en-US` and Hindi `hi-IN`).
+* AI response is read aloud using **speech synthesis**.
+* Auto-scroll chat window to latest messages.
+* Emoji-friendly chat interface.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## **Frontend Flow / Workflow**
 
-### `npm test`
+1. **User Interaction**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   * User clicks **record** to start recording their voice.
+   * The audio is captured in **webm** format using the browser `MediaRecorder` API.
 
-### `npm run build`
+2. **Sending Audio**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   * Recording stops → audio blob is prepared.
+   * Audio blob, language, mode, and roleplay topic are sent as `FormData` to the **backend** `/api/chat`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Backend Processing**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   * Backend converts audio to WAV.
+   * Transcribes audio using AI (Whisper/Together AI).
+   * Generates AI response using Together AI.
+   * Response is sent back as JSON.
 
-### `npm run eject`
+4. **Frontend Response**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+   * Response is displayed in the chat window.
+   * Speech synthesis reads out the AI response.
+   * Conversation is stored per language and mode for multi-session continuity.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## **Installation**
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1. Clone the repo:
 
-## Learn More
+```bash
+git clone <repo-url>
+cd frontend
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+2. Install dependencies:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm install
+```
 
-### Code Splitting
+3. Create `.env` file:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
+REACT_APP_BACKEND_URL=http://localhost:3001
+```
 
-### Analyzing the Bundle Size
+4. Start development server:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+npm start
+```
 
-### Making a Progressive Web App
+Frontend will run on `http://localhost:3000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+---
 
-### Advanced Configuration
+## **Usage**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+* Click **Start Recording** to speak to the AI.
+* Choose **Language**: `en-US` or `hi-IN`.
+* Choose **Mode**:
 
-### Deployment
+  * `Free Chat` – general conversation.
+  * `Roleplay` – scenarios like At School, At Home, At the Store.
+* Stop recording → wait for AI reply.
+* AI response will appear in chat and be read aloud.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `npm run build` fails to minify
+## **Key Notes**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+* Conversations are stored per `(mode + language)` key:
+
+```
+'free-chat-en-US', 'At School-en-US', 'At Home-en-US', 'At the Store-en-US'
+'free-chat-hi-IN', 'At School-hi-IN', ...
+```
+
+* Speech synthesis automatically **removes emojis** to avoid pronunciation issues.
+* Auto-scroll ensures the latest messages are always visible.
+
+---
+
+## **Workflow Diagram**
+
+```
+User (Frontend)
+      |
+      |  Records audio (webm)
+      v
+  App.js (MediaRecorder)
+      |
+      |  Sends audio + language + mode + topic
+      v
+  Backend API (/api/chat)
+      |
+      |  Convert → Transcribe → Generate AI Response
+      v
+  Response JSON (userText, aiReply)
+      |
+      |  Display in chat window
+      |  Speech synthesis reads AI response
+      v
+User (Frontend)
+```
+
+---
