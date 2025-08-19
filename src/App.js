@@ -40,47 +40,14 @@ function App() {
     }
   }, [currentConversation]);
 
-  // --- Helpers for speech synthesis ---
-  const stripEmojis = (str) =>
-    str.replace(
-      // broad emoji ranges (no \p{Emoji} needed)
-      /[\u{1F300}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}]/gu,
-      ""
-    );
-
+  // Speech synthesis
   const speakText = (text, lang) => {
     try {
-      if (!window.speechSynthesis) return;
-
-      // Cancel anything already speaking
       window.speechSynthesis.cancel();
-
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;           // "hi-IN" or "en-US"
-      utterance.rate = 0.95;          // slightly slower for clarity
-      utterance.pitch = 1;
-
-      const assignVoiceAndSpeak = () => {
-        const voices = window.speechSynthesis.getVoices();
-
-        // Try exact match first (e.g., "hi-IN")
-        let voice =
-          voices.find((v) => v.lang === lang) ||
-          // Fallback: match on language only (e.g., "hi" or "en")
-          voices.find((v) => v.lang?.startsWith(lang.split("-")[0])) ||
-          // Extra fallback for Hindi by name/locale hints
-          voices.find((v) => /hi|hindi|india/i.test(`${v.lang} ${v.name}`));
-
-        if (voice) utterance.voice = voice;
-        window.speechSynthesis.speak(utterance);
-      };
-
-      // Voices may not be loaded yet on first call
-      if (window.speechSynthesis.getVoices().length > 0) {
-        assignVoiceAndSpeak();
-      } else {
-        window.speechSynthesis.onvoiceschanged = assignVoiceAndSpeak;
-      }
+      utterance.lang = lang;
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
     } catch (error) {
       console.error("Speech synthesis failed:", error);
     }
@@ -135,11 +102,10 @@ function App() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Your backend currently returns { userText, aiReply }
       const { userText, aiReply } = response.data;
 
-      // Clean text for speech (strip emojis to avoid TTS glitches)
-      const cleanTextForSpeech = stripEmojis(aiReply || "");
+      // Remove emojis for speech synthesis
+      const cleanTextForSpeech = aiReply.replace(/\p{Emoji}/gu, "");
 
       setConversations((prev) => ({
         ...prev,
