@@ -103,6 +103,11 @@ function App() {
       });
 
       const { userText, aiReply } = response.data;
+      
+       if (typeof aiReply !== "string") {
+          console.warn("⚠️ aiReply is not a string, received:", aiReply);
+          aiReply = String(aiReply || "");
+       }
 
       // Remove emojis for speech synthesis
       const cleanTextForSpeech = aiReply.replace(/\p{Emoji}/gu, "");
