@@ -51,7 +51,7 @@ function App() {
     }
   };
 
-  // Recording handlers
+  // Start recording
   const handleStartRecording = async () => {
     try {
       audioChunks.current = [];
@@ -68,6 +68,7 @@ function App() {
     }
   };
 
+  // Stop recording
   const handleStopRecording = () => {
     if (mediaRecorder.current?.state === 'recording') {
       mediaRecorder.current.stop();
@@ -76,6 +77,7 @@ function App() {
     }
   };
 
+  // Send audio to backend
   const handleSendAudio = async () => {
     const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
     audioChunks.current = [];
@@ -127,23 +129,19 @@ function App() {
   };
 
   return (
-    <div className="bg-amber-50 flex flex-col md:flex-row h-screen font-sans">
-      {/* Control Panel */}
-      <div className="md:w-1/4 w-full border-b md:border-b-0 md:border-r border-gray-300 p-2 md:p-4">
-        <ControlPanel
-          language={language} setLanguage={setLanguage}
-          mode={mode} setMode={setMode}
-          roleplayTopic={roleplayTopic} setRoleplayTopic={setRoleplayTopic}
-          isRecording={isRecording} isLoading={isLoading}
-          handleStartRecording={handleStartRecording}
-          handleStopRecording={handleStopRecording}
-        />
-      </div>
-
-      {/* Chat Window */}
-      <div className="md:w-3/4 w-full flex-1 overflow-y-auto p-2 md:p-4" ref={chatWindowRef}>
-        <ChatWindow conversation={currentConversation} />
-      </div>
+    <div style={{ fontFamily: "'Nunito', sans-serif" }} className="bg-amber-50 flex h-screen">
+      <ControlPanel
+        language={language} setLanguage={setLanguage}
+        mode={mode} setMode={setMode}
+        roleplayTopic={roleplayTopic} setRoleplayTopic={setRoleplayTopic}
+        isRecording={isRecording} isLoading={isLoading}
+        handleStartRecording={handleStartRecording}
+        handleStopRecording={handleStopRecording}
+      />
+      <ChatWindow
+        conversation={currentConversation}
+        chatWindowRef={chatWindowRef}
+      />
     </div>
   );
 }
