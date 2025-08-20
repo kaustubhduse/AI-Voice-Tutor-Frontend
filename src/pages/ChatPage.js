@@ -16,7 +16,6 @@ function ChatPage() {
     'free-chat-en-US': [], 'At School-en-US': [], 'At the Store-en-US': [], 'At Home-en-US': [],
     'free-chat-hi-IN': [], 'At School-hi-IN': [], 'At the Store-hi-IN': [], 'At Home-hi-IN': [],
   });
-
   const mediaRecorder = useRef(null);
   const audioChunks = useRef(null);
   const chatWindowRef = useRef(null);
@@ -24,51 +23,11 @@ function ChatPage() {
   const currentConversationKey = `${mode === 'roleplay' ? roleplayTopic : 'free-chat'}-${language}`;
   const currentConversation = conversations[currentConversationKey] || [];
 
-  // This effect scrolls the chat window
   useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
   }, [currentConversation]);
-
-  // NEW FEATURE: This effect starts the roleplay conversation
-  useEffect(() => {
-    const initiateRoleplay = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axios.post('http://localhost:3001/initiate', {
-          language,
-          mode,
-          roleplayTopic,
-        });
-
-        const { aiReply } = response.data;
-        if (aiReply) {
-          const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
-          const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
-
-          setConversations(prev => ({
-            ...prev,
-            [currentConversationKey]: [{ sender: 'ai', text: aiReply }],
-          }));
-          
-          if (cleanTextForSpeech) {
-            speakText(cleanTextForSpeech.trim(), language);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to initiate roleplay:", error);
-        alert("Sorry, couldn't start the conversation.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Trigger the initiation if mode is 'roleplay' and the chat for that role is empty
-    if (mode === 'roleplay' && currentConversation.length === 0) {
-      initiateRoleplay();
-    }
-  }, [currentConversationKey]); // This re-runs every time you switch roles/languages
 
   const speakText = (text, lang) => {
     try {
@@ -122,7 +81,7 @@ function ChatPage() {
     formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/chat`, formData, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { userText, aiReply } = response.data;
