@@ -5,7 +5,6 @@ import ControlPanel from "../components/ControlPanel";
 import ChatWindow from "../components/ChatWindow";
 import SpeakButton from "../components/SpeakButton";
 
-// A component for the menu button, visible only on mobile
 const HamburgerButton = ({ onClick }) => (
   <button
     onClick={onClick}

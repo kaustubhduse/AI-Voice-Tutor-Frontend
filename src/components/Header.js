@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 function Header() {
   const activeLinkStyle = {
-    color: '#f97316', // orange-500
+    color: '#f97316',
     borderBottom: '2px solid #f97316'
   };
 

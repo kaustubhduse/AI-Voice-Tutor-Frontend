@@ -2,7 +2,6 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
-// Simple SVG icons for the guidelines
 const SelectIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

@@ -1,11 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-// Responsive SVG icon for the microphone
 const MicrophoneIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12" // Responsive sizes
+    className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12" 
     viewBox="0 0 20 20"
     fill="currentColor"
   >
