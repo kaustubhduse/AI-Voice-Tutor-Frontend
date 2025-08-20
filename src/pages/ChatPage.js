@@ -79,7 +79,7 @@ function ChatPage() {
     formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, formData, {
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/chat`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { userText, aiReply } = response.data;
