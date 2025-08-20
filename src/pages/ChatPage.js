@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ControlPanel from '../components/ControlPanel';
 import ChatWindow from '../components/ChatWindow';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 function ChatPage() {
   const [isRecording, setIsRecording] = useState(false);
