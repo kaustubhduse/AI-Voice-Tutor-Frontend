@@ -4,7 +4,8 @@ import axios from "axios";
 import ControlPanel from "./components/ControlPanel";
 import ChatWindow from "./components/ChatWindow";
 
-const backendUrl = process.env.REACT_APP_BACKEND_URL;
+
+const backendUrl = "http://localhost:3001";
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
@@ -22,6 +23,10 @@ function App() {
     "At School-hi-IN": [],
     "At the Store-hi-IN": [],
     "At Home-hi-IN": [],
+    "free-chat-mr-IN": [],
+    "At School-mr-IN": [],
+    "free-chat-gu-IN": [],
+    "At School-gu-IN": [],
   });
 
   const mediaRecorder = useRef(null);
@@ -40,11 +45,23 @@ function App() {
     }
   }, [currentConversation]);
 
-  // Speech synthesis
+  // Speech synthesis with language fallback
   const speakText = (text, lang) => {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
+
+      const voices = window.speechSynthesis.getVoices();
+      const findVoice = (prefix) =>
+        voices.find((v) => v.lang.toLowerCase().startsWith(prefix.toLowerCase()));
+
+      if (lang === "mr-IN" || lang === "gu-IN") {
+        // Try Hindi voice first (phonetically closer)
+        utterance.voice = findVoice("hi") || findVoice("en");
+      } else {
+        utterance.voice = findVoice(lang) || findVoice("en");
+      }
+
       utterance.lang = lang;
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
@@ -102,14 +119,14 @@ function App() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const { userText, aiReply } = response.data;
-      
-       if (typeof aiReply !== "string") {
-          console.warn("⚠️ aiReply is not a string, received:", aiReply);
-          aiReply = String(aiReply || "");
-       }
+      let { userText, aiReply } = response.data;
 
-      // Remove emojis for speech synthesis
+      if (typeof aiReply !== "string") {
+        console.warn("⚠️ aiReply is not a string, received:", aiReply);
+        aiReply = String(aiReply || "");
+      }
+
+      // Clean emojis for speech synthesis
       const cleanTextForSpeech = aiReply.replace(/\p{Emoji}/gu, "");
 
       setConversations((prev) => ({
