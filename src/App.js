@@ -5,7 +5,7 @@ import ControlPanel from "./components/ControlPanel";
 import ChatWindow from "./components/ChatWindow";
 
 
-const backendUrl = "http://localhost:3001";
+const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
