@@ -1,9 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { AnimatePresence } from 'framer-motion';
 import ControlPanel from '../components/ControlPanel';
 import ChatWindow from '../components/ChatWindow';
+import SpeakButton from '../components/SpeakButton';
+
+// A component for the menu button, visible only on mobile
+const HamburgerButton = ({ onClick }) => (
+  <button onClick={onClick} className="md:hidden fixed top-5 right-5 z-20 bg-slate-800/50 p-2 rounded-md text-white backdrop-blur-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+);
 
 function ChatPage() {
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState('en-US');
@@ -15,6 +27,9 @@ function ChatPage() {
     'free-chat-hi-IN': [], 'At School-hi-IN': [], 'At the Store-hi-IN': [], 'At Home-hi-IN': [],
   });
 
+  const [speakingMessageIndex, setSpeakingMessageIndex] = useState(null);
+  const [highlightedWordIndex, setHighlightedWordIndex] = useState(null);
+
   const mediaRecorder = useRef(null);
   const audioChunks = useRef(null);
   const chatWindowRef = useRef(null);
@@ -22,37 +37,56 @@ function ChatPage() {
   const currentConversationKey = `${mode === 'roleplay' ? roleplayTopic : 'free-chat'}-${language}`;
   const currentConversation = conversations[currentConversationKey] || [];
 
-  // This effect scrolls the chat window to the bottom when new messages are added
   useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
   }, [currentConversation]);
 
-  // This effect starts the roleplay conversation if the mode is 'roleplay' and the chat is empty
+  const speakText = (message, messageIndex, lang) => {
+    try {
+      window.speechSynthesis.cancel();
+      setSpeakingMessageIndex(messageIndex);
+      setHighlightedWordIndex(0);
+
+      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
+      const cleanText = message.text.replace(emojiRegex, '').trim();
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = lang;
+      utterance.rate = 0.9;
+      
+      let wordIndex = 0;
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+            setHighlightedWordIndex(wordIndex);
+            wordIndex++;
+        }
+      };
+
+      utterance.onend = () => {
+        setSpeakingMessageIndex(null);
+        setHighlightedWordIndex(null);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("Browser speech synthesis failed:", error);
+      setSpeakingMessageIndex(null);
+      setHighlightedWordIndex(null);
+    }
+  };
+  
   useEffect(() => {
     const initiateRoleplay = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/initiate`, {
-          language,
-          mode,
-          roleplayTopic,
-        });
-
+        const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/initiate`, { language, mode, roleplayTopic });
         const { aiReply } = response.data;
         if (aiReply) {
-          const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
-          const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
-
-          setConversations(prev => ({
-            ...prev,
-            [currentConversationKey]: [{ sender: 'ai', text: aiReply }],
-          }));
-          
-          if (cleanTextForSpeech) {
-            speakText(cleanTextForSpeech.trim(), language);
-          }
+          const newMessage = { sender: 'ai', text: aiReply };
+          setConversations(prev => ({ ...prev, [currentConversationKey]: [newMessage] }));
+          speakText(newMessage, 0, language);
         }
       } catch (error) {
         console.error("Failed to initiate roleplay:", error);
@@ -61,24 +95,10 @@ function ChatPage() {
         setIsLoading(false);
       }
     };
-
     if (mode === 'roleplay' && currentConversation.length === 0) {
       initiateRoleplay();
     }
-  }, [currentConversationKey]); // This re-runs every time you switch roles/languages
-
-  // This function speaks text using the browser's built-in voice engine
-  const speakText = (text, lang) => {
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.rate = 0.9;
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      console.error("Browser speech synthesis failed:", error);
-    }
-  };
+  }, [currentConversationKey]);
 
   const handleStartRecording = async () => {
     try {
@@ -104,7 +124,6 @@ function ChatPage() {
     }
   };
 
-  // This function sends the recorded audio to the backend for an ongoing conversation
   const handleSendAudio = async () => {
     const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
     audioChunks.current = [];
@@ -112,34 +131,33 @@ function ChatPage() {
       setIsLoading(false);
       return;
     }
-
     const formData = new FormData();
     formData.append('audio', audioBlob);
     formData.append('language', language);
     formData.append('mode', mode);
     formData.append('roleplayTopic', roleplayTopic);
     formData.append('history', JSON.stringify(currentConversation));
-
     try {
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/chat`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { userText, aiReply } = response.data;
-      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
-      const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
+
+      const newUserMessage = { sender: 'user', text: userText };
+      const newAiMessage = { sender: 'ai', text: aiReply };
       
       setConversations(prev => ({
         ...prev,
         [currentConversationKey]: [
           ...prev[currentConversationKey],
-          { sender: 'user', text: userText },
-          { sender: 'ai', text: aiReply },
+          newUserMessage,
+          newAiMessage,
         ],
       }));
+      
+      const nextMessageIndex = currentConversation.length + 1;
+      speakText(newAiMessage, nextMessageIndex, language);
 
-      if (cleanTextForSpeech) {
-        speakText(cleanTextForSpeech.trim(), language);
-      }
     } catch (error) {
       console.error('Error sending audio to backend:', error);
       alert('Sorry, something went wrong. Please try again.');
@@ -149,19 +167,49 @@ function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full">
+    <div className="flex flex-col md:flex-row h-full w-full relative">
+      <HamburgerButton onClick={() => setIsPanelOpen(true)} />
+
+      <AnimatePresence>
+        {isPanelOpen && (
+          <div 
+            onClick={() => setIsPanelOpen(false)}
+            className="md:hidden fixed inset-0 bg-black/50 z-30"
+          ></div>
+        )}
+      </AnimatePresence>
+
       <ControlPanel 
-        language={language} setLanguage={setLanguage}
-        mode={mode} setMode={setMode}
-        roleplayTopic={roleplayTopic} setRoleplayTopic={setRoleplayTopic}
-        isRecording={isRecording} isLoading={isLoading}
+        isOpen={isPanelOpen}
+        setIsOpen={setIsPanelOpen}
+        language={language}
+        setLanguage={setLanguage}
+        mode={mode}
+        setMode={setMode}
+        roleplayTopic={roleplayTopic}
+        setRoleplayTopic={setRoleplayTopic}
+        isRecording={isRecording}
+        isLoading={isLoading}
         handleStartRecording={handleStartRecording}
         handleStopRecording={handleStopRecording}
       />
+      
       <ChatWindow 
         conversation={currentConversation}
         chatWindowRef={chatWindowRef}
+        speakingMessageIndex={speakingMessageIndex}
+        highlightedWordIndex={highlightedWordIndex}
+        language={language}
       />
+
+      <div className="md:hidden fixed bottom-5 left-5 z-20">
+        <SpeakButton
+          isRecording={isRecording}
+          isLoading={isLoading}
+          handleStartRecording={handleStartRecording}
+          handleStopRecording={handleStopRecording}
+        />
+      </div>
     </div>
   );
 }
