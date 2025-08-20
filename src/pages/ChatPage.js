@@ -3,17 +3,18 @@ import axios from 'axios';
 import ControlPanel from '../components/ControlPanel';
 import ChatWindow from '../components/ChatWindow';
 
-
 function ChatPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [language, setLanguage] = useState('en-US');
   const [mode, setMode] = useState('free-chat');
   const [roleplayTopic, setRoleplayTopic] = useState('At School');
+  
   const [conversations, setConversations] = useState({
     'free-chat-en-US': [], 'At School-en-US': [], 'At the Store-en-US': [], 'At Home-en-US': [],
     'free-chat-hi-IN': [], 'At School-hi-IN': [], 'At the Store-hi-IN': [], 'At Home-hi-IN': [],
   });
+
   const mediaRecorder = useRef(null);
   const audioChunks = useRef(null);
   const chatWindowRef = useRef(null);
@@ -21,12 +22,52 @@ function ChatPage() {
   const currentConversationKey = `${mode === 'roleplay' ? roleplayTopic : 'free-chat'}-${language}`;
   const currentConversation = conversations[currentConversationKey] || [];
 
+  // This effect scrolls the chat window to the bottom when new messages are added
   useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
   }, [currentConversation]);
 
+  // This effect starts the roleplay conversation if the mode is 'roleplay' and the chat is empty
+  useEffect(() => {
+    const initiateRoleplay = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.post('http://localhost:3001/initiate', {
+          language,
+          mode,
+          roleplayTopic,
+        });
+
+        const { aiReply } = response.data;
+        if (aiReply) {
+          const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
+          const cleanTextForSpeech = aiReply.replace(emojiRegex, '');
+
+          setConversations(prev => ({
+            ...prev,
+            [currentConversationKey]: [{ sender: 'ai', text: aiReply }],
+          }));
+          
+          if (cleanTextForSpeech) {
+            speakText(cleanTextForSpeech.trim(), language);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initiate roleplay:", error);
+        alert("Sorry, couldn't start the conversation.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (mode === 'roleplay' && currentConversation.length === 0) {
+      initiateRoleplay();
+    }
+  }, [currentConversationKey]); // This re-runs every time you switch roles/languages
+
+  // This function speaks text using the browser's built-in voice engine
   const speakText = (text, lang) => {
     try {
       window.speechSynthesis.cancel();
@@ -63,6 +104,7 @@ function ChatPage() {
     }
   };
 
+  // This function sends the recorded audio to the backend for an ongoing conversation
   const handleSendAudio = async () => {
     const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
     audioChunks.current = [];
@@ -79,7 +121,7 @@ function ChatPage() {
     formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/chat`, formData, {
+      const response = await axios.post('http://localhost:3001/chat', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { userText, aiReply } = response.data;
