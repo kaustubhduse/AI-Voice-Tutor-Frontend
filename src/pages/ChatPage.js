@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ControlPanel from '../components/ControlPanel';
 import ChatWindow from '../components/ChatWindow';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 function ChatPage() {
   const [isRecording, setIsRecording] = useState(false);
@@ -119,7 +122,7 @@ function ChatPage() {
     formData.append('history', JSON.stringify(currentConversation));
 
     try {
-      const response = await axios.post('http://localhost:3001/chat', formData, {
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/chat`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { userText, aiReply } = response.data;
