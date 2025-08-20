@@ -2,6 +2,9 @@
 
 This is the **frontend React application** for the AI Voice Tutor project. It allows users (children) to interact with an AI English tutor using **voice**. The AI can chat freely or roleplay scenarios like **At School, At Home, or At the Store**. Users can also select the language for conversation.
 
+For backend setup and API details, see the [Backend README](https://github.com/kaustubhduse/AI-Voice-Tutor-Backend/blob/main/Readme.md).
+
+
 ---
 
 ## **Features**
